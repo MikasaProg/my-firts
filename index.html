@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Cloud Tracker</title>
+    <title>Family Tracker Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -15,226 +15,214 @@
             --hint: var(--tg-theme-hint-color, #888);
         }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--text); }
-        .app-container { max-width: 600px; margin: 0 auto; }
+        .sync-mini { position: fixed; top: 5px; right: 10px; font-size: 10px; opacity: 0.6; }
         .status-header { display: flex; gap: 10px; margin-bottom: 15px; }
         .status-item { flex: 1; background: var(--card); padding: 12px; border-radius: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .status-emoji { font-size: 28px; display: block; }
-        .status-text { font-weight: bold; font-size: 0.9em; display: block; margin-top: 5px; }
-        .status-label { font-size: 10px; color: var(--hint); text-transform: uppercase; }
-        .user-tabs { display: flex; border-radius: 12px; background: rgba(0,0,0,0.05); padding: 3px; margin-bottom: 15px; }
+        .user-tabs { display: flex; background: rgba(0,0,0,0.05); padding: 3px; border-radius: 12px; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 8px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: none; color: var(--text); }
-        .tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-btn.active { background: var(--card); color: var(--primary); }
         .day-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--card); padding: 8px 15px; border-radius: 12px; }
-        .day-nav button { background: rgba(0,0,0,0.05); border: none; padding: 5px 12px; border-radius: 8px; color: var(--text); }
         .section-card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; }
-        h3 { margin: 0 0 12px 0; font-size: 1em; color: var(--hint); border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
         .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.03); }
-        input { padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
-        .flex-row { display: flex; gap: 5px; }
+        input, select { padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
         .btn-ok { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-del { color: var(--danger); border: none; background: none; font-weight: bold; cursor: pointer; }
-        .food-list { margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.02); border-radius: 10px; font-size: 12px; display: none; }
-        .food-list.active { display: block; }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; }
+        .btn-del { color: var(--danger); border: none; background: none; font-size: 18px; cursor: pointer; font-weight: bold; }
+        .num-input { width: 45px; text-align: center; border: none; background: rgba(0,0,0,0.03); border-radius: 5px; }
+        .food-log { font-size: 11px; color: var(--hint); margin-top: 8px; display: none; }
+        .stat-badge { font-size: 10px; padding: 2px 6px; border-radius: 5px; font-weight: bold; margin-top: 4px; display: inline-block; }
+        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="loading-overlay">Синхронизация...</div>
+<div id="sync-indicator" class="sync-mini">☁️ Sync OK</div>
+<div id="loading">Загрузка...</div>
 
 <div class="app-container">
     <div class="status-header">
         <div class="status-item">
             <span id="dayEmo" class="status-emoji">😴</span>
-            <span id="dayText" class="status-text">...</span>
-            <span class="status-label">Цель дня</span>
+            <span id="dayText" style="font-weight:bold; font-size:14px;">Ожидание</span>
+            <div style="font-size:10px; color:var(--hint)">ЦЕЛЬ ДНЯ</div>
         </div>
         <div class="status-item">
-            <span id="syncStatus" class="status-emoji">☁️</span>
-            <span id="syncText" class="status-text">ОК</span>
-            <span class="status-label">Облако</span>
+            <span id="weekEmo" class="status-emoji">⏳</span>
+            <span id="weekText" style="font-weight:bold; font-size:14px;">...</span>
+            <div style="font-size:10px; color:var(--hint)">НЕДЕЛЯ</div>
         </div>
     </div>
 
     <div class="user-tabs">
-        <button id="btn-Артем" class="tab-btn active" onclick="setUser('Артем')">Артем</button>
-        <button id="btn-Вероника" class="tab-btn" onclick="setUser('Вероника')">Вероника</button>
+        <button id="btn-Артем" class="tab-btn active" onclick="switchUser('Артем')">Артем</button>
+        <button id="btn-Вероника" class="tab-btn" onclick="switchUser('Вероника')">Вероника</button>
     </div>
 
     <div class="day-nav">
-        <button onclick="changeDay(-1)">❮</button>
+        <button class="btn-ok" onclick="changeDay(-1)">❮</button>
         <b id="dateDisplay">...</b>
-        <button onclick="changeDay(1)">❯</button>
+        <button class="btn-ok" onclick="changeDay(1)">❯</button>
     </div>
 
     <div class="section-card">
         <h3>📜 Привычки</h3>
-        <div class="row"><span>📖 Чтение</span><input type="checkbox" id="read" onchange="save()"></div>
-        <div class="row"><span>🏋️ Спорт</span><input type="checkbox" id="sport" onchange="save()"></div>
-        <div id="dynamicList"></div>
-    </div>
-
-    <div class="section-card">
-        <h3>🍎 Питание (Цель: <input type="number" id="cN" style="width:60px; border:none; background:none; font-weight:bold" oninput="save()">)</h3>
-        <div style="font-size:18px; margin-bottom:10px;">Факт: <span id="cF_val">0</span> ккал</div>
-        <div class="flex-row">
-            <input type="text" id="foodName" placeholder="Продукт..." style="flex:1">
-            <input type="number" id="foodCal" placeholder="ккал" style="width:70px">
-            <button class="btn-ok" onclick="addFood()">+</button>
-        </div>
-        <button onclick="document.getElementById('foodLog').classList.toggle('active')" style="background:none; border:none; color:var(--accent); font-size:11px; margin-top:10px;">▼ История еды</button>
-        <div id="foodLog" class="food-list"></div>
-    </div>
-
-    <div class="section-card">
-        <h3>💰 Баланс: <span id="moneyNet">0</span></h3>
-        <div class="flex-row">
-            <input type="number" id="moneyInp" placeholder="Сумма" style="flex:1">
-            <button class="btn-ok" onclick="modMoney(true)">+</button>
-            <button class="btn-ok" style="background:var(--danger)" onclick="modMoney(false)">-</button>
+        <div class="row"><span>📖 Чтение</span><input type="checkbox" id="h-read" onchange="save()"></div>
+        <div class="row"><span>🏋️ Спорт</span><input type="checkbox" id="h-sport" onchange="save()"></div>
+        <div id="customList"></div>
+        <div style="margin-top:10px; display:flex; gap:5px;">
+            <input type="text" id="newName" placeholder="Новая привычка..." style="flex:1">
+            <select id="newType"><option value="check">☑️</option><option value="num">🔢</option></select>
+            <button class="btn-ok" onclick="addCustom()">+</button>
         </div>
     </div>
 
-    <div class="section-card" style="height: 180px;">
-        <canvas id="mainChart"></canvas>
+    <div class="section-card">
+        <h3>🍎 Питание (Цель: <input type="number" id="cN" style="width:50px; border:none; background:none; font-weight:bold" onchange="save()">)</h3>
+        <div>Факт: <b id="cF_val">0</b> ккал</div>
+        <div style="display:flex; gap:5px; margin-top:10px;">
+            <input type="text" id="fName" placeholder="Еда..." style="flex:1">
+            <input type="number" id="fCal" placeholder="ккал" style="width:60px">
+            <button class="btn-ok" onclick="addFood()">ОК</button>
+        </div>
+        <button onclick="document.getElementById('fLog').style.display='block'" style="background:none; border:none; color:var(--accent); font-size:10px; margin-top:5px;">▼ История еды</button>
+        <div id="fLog" class="food-log"></div>
     </div>
+
+    <div class="section-card">
+        <h3>💰 Средства: <span id="moneyNet">0</span></h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div>
+                <input type="number" id="plusMoney" placeholder="Заработок" style="width:80%">
+                <button class="btn-ok" onclick="modMoney(true)">+</button>
+                <div id="todayPlus" class="stat-badge" style="background:rgba(116,170,80,0.1); color:var(--primary)">Сегодня: +0</div>
+            </div>
+            <div>
+                <input type="number" id="minusMoney" placeholder="Траты" style="width:80%">
+                <button class="btn-ok" style="background:var(--danger)" onclick="modMoney(false)">-</button>
+                <div id="todayMinus" class="stat-badge" style="background:rgba(231,76,60,0.1); color:var(--danger)">Сегодня: -0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card" style="height: 180px;"><canvas id="mainChart"></canvas></div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
-
     const DB_URL = "https://family-b4799-default-rtdb.europe-west1.firebasedatabase.app/"; 
     let user = 'Артем', day = new Date().getDate(), chart;
-    let schema = JSON.parse(localStorage.getItem('schema') || '[]');
-
-    async function setUser(n) { 
-        user = n; 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n));
-        await load(); 
-    }
-    
-    async function changeDay(d) { 
-        day = Math.max(1, Math.min(31, day + d)); 
-        await load(); 
-    }
 
     async function save() {
-        document.getElementById('syncStatus').innerText = '⏳';
-        const d = {
-            r: document.getElementById('read').checked,
-            s: document.getElementById('sport').checked,
-            cN: document.getElementById('cN').value || 2000,
+        document.getElementById('sync-indicator').innerText = '⏳ Syncing...';
+        const data = {
+            money: parseInt(document.getElementById('moneyNet').innerText),
+            plusToday: parseInt(document.getElementById('todayPlus').innerText.replace(/\D/g,'')) || 0,
+            minusToday: parseInt(document.getElementById('todayMinus').innerText.replace(/\D/g,'')) || 0,
+            cN: parseInt(document.getElementById('cN').value) || 2000,
             cF: parseInt(document.getElementById('cF_val').innerText) || 0,
-            money: parseInt(document.getElementById('moneyNet').innerText) || 0,
-            foodStack: Array.from(document.querySelectorAll('.food-data-item')).map(el => JSON.parse(el.dataset.info))
+            read: document.getElementById('h-read').checked,
+            sport: document.getElementById('h-sport').checked,
+            fLog: document.getElementById('fLog').innerHTML,
+            customs: Array.from(document.querySelectorAll('.c-row')).map(el => ({
+                name: el.querySelector('.c-name').innerText,
+                type: el.dataset.type,
+                val: el.dataset.type === 'check' ? el.querySelector('input').checked : parseInt(el.querySelector('.c-f').value) || 0,
+                goal: el.dataset.type === 'num' ? parseInt(el.querySelector('.c-g').value) || 0 : 0
+            }))
         };
-
-        // Сохраняем в Firebase (путь: пользователи / имя / день)
-        await fetch(`${DB_URL}/users/${user}/day${day}.json`, {
-            method: 'PUT',
-            body: JSON.stringify(d)
-        });
-        
-        document.getElementById('syncStatus').innerText = '☁️';
+        await fetch(`${DB_URL}/u/${user}/d${day}.json`, { method: 'PUT', body: JSON.stringify(data) });
+        document.getElementById('sync-indicator').innerText = '☁️ Sync OK';
         updateUI();
     }
 
     async function load() {
-        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('loading').style.display = 'flex';
         document.getElementById('dateDisplay').innerText = `${day} Февраля`;
+        const res = await fetch(`${DB_URL}/u/${user}/d${day}.json`);
+        const d = await res.json() || {};
+
+        document.getElementById('moneyNet').innerText = d.money || 0;
+        document.getElementById('todayPlus').innerText = `Сегодня: +${d.plusToday || 0}`;
+        document.getElementById('todayMinus').innerText = `Сегодня: -${d.minusToday || 0}`;
+        document.getElementById('cN').value = d.cN || 2000;
+        document.getElementById('cF_val').innerText = d.cF || 0;
+        document.getElementById('h-read').checked = d.read || false;
+        document.getElementById('h-sport').checked = d.sport || false;
+        document.getElementById('fLog').innerHTML = d.fLog || '';
         
-        try {
-            const res = await fetch(`${DB_URL}/users/${user}/day${day}.json`);
-            const d = await res.json() || {};
-
-            document.getElementById('read').checked = d.r || false;
-            document.getElementById('sport').checked = d.s || false;
-            document.getElementById('cN').value = d.cN || 2000;
-            document.getElementById('cF_val').innerText = d.cF || 0;
-            document.getElementById('moneyNet').innerText = d.money || 0;
-
-            const log = document.getElementById('foodLog'); 
-            log.innerHTML = '';
-            if(d.foodStack) {
-                d.foodStack.forEach((item, i) => {
-                    log.innerHTML += `<div class="food-data-item" data-info='${JSON.stringify(item)}' style="display:flex; justify-content:space-between; padding:4px 0;">
-                        <span>${item.name}</span><span>${item.cal} <button class="btn-del" onclick="delFood(${i})">×</button></span>
-                    </div>`;
-                });
-            }
-        } catch (e) { console.error("Ошибка сети"); }
-
-        document.getElementById('loading-overlay').style.display = 'none';
+        const cont = document.getElementById('customList'); cont.innerHTML = '';
+        if(d.customs) d.customs.forEach(c => {
+            let ctrl = c.type === 'check' ? `<input type="checkbox" ${c.val?'checked':''} onchange="save()">` : `<div style="display:flex; gap:3px;"><input type="number" class="num-input c-f" value="${c.val}" onchange="save()"><small>/</small><input type="number" class="num-input c-g" value="${c.goal}" onchange="save()"></div>`;
+            cont.innerHTML += `<div class="row c-row" data-type="${c.type}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${c.name}</span></div>${ctrl}</div>`;
+        });
+        document.getElementById('loading').style.display = 'none';
         updateUI();
     }
 
-    async function addFood() {
-        const n = document.getElementById('foodName').value || 'Еда';
-        const c = parseInt(document.getElementById('foodCal').value) || 0;
-        const curFact = parseInt(document.getElementById('cF_val').innerText);
-        
-        document.getElementById('cF_val').innerText = curFact + c;
-        const log = document.getElementById('foodLog');
-        log.innerHTML += `<div class="food-data-item" data-info='${JSON.stringify({name:n, cal:c})}'>${n} - ${c}</div>`;
-        
-        document.getElementById('foodName').value = '';
-        document.getElementById('foodCal').value = '';
-        await save();
-        tg.HapticFeedback.notificationOccurred('success');
+    function addFood() {
+        const n = document.getElementById('fName').value || 'Еда';
+        const c = parseInt(document.getElementById('fCal').value) || 0;
+        document.getElementById('cF_val').innerText = parseInt(document.getElementById('cF_val').innerText) + c;
+        document.getElementById('fLog').innerHTML += `<div>${n}: ${c} ккал</div>`;
+        document.getElementById('fName').value = ''; document.getElementById('fCal').value = '';
+        save();
     }
 
-    async function delFood(idx) {
-        const items = Array.from(document.querySelectorAll('.food-data-item'));
-        items.splice(idx, 1);
-        const newFact = items.reduce((acc, el) => acc + JSON.parse(el.dataset.info).cal, 0);
-        document.getElementById('cF_val').innerText = newFact;
-        
-        const log = document.getElementById('foodLog');
-        log.innerHTML = '';
-        items.forEach(el => log.appendChild(el));
-        
-        await save();
+    function addCustom() {
+        const name = "🎯 " + document.getElementById('newName').value;
+        const type = document.getElementById('newType').value;
+        if(!document.getElementById('newName').value) return;
+        let ctrl = type === 'check' ? `<input type="checkbox" onchange="save()">` : `<div style="display:flex; gap:3px;"><input type="number" class="num-input c-f" value="0" onchange="save()"><small>/</small><input type="number" class="num-input c-g" value="10" onchange="save()"></div>`;
+        document.getElementById('customList').innerHTML += `<div class="row c-row" data-type="${type}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${name}</span></div>${ctrl}</div>`;
+        document.getElementById('newName').value = ''; save();
     }
 
-    async function modMoney(isEarn) {
-        const val = parseInt(document.getElementById('moneyInp').value) || 0;
-        const cur = parseInt(document.getElementById('moneyNet').innerText);
-        document.getElementById('moneyNet').innerText = isEarn ? cur + val : cur - val;
-        document.getElementById('moneyInp').value = '';
-        await save();
-        tg.HapticFeedback.impactOccurred('medium');
+    function modMoney(isPlus) {
+        const id = isPlus ? 'plusMoney' : 'minusMoney';
+        const statId = isPlus ? 'todayPlus' : 'todayMinus';
+        const val = parseInt(document.getElementById(id).value) || 0;
+        document.getElementById('moneyNet').innerText = isPlus ? parseInt(document.getElementById('moneyNet').innerText) + val : parseInt(document.getElementById('moneyNet').innerText) - val;
+        const curStat = parseInt(document.getElementById(statId).innerText.replace(/\D/g,'')) || 0;
+        document.getElementById(statId).innerText = `Сегодня: ${isPlus?'+':'-'}${curStat + val}`;
+        document.getElementById(id).value = ''; save();
     }
 
-    function updateUI() {
-        const cF = parseInt(document.getElementById('cF_val').innerText);
+    function switchUser(n) { user = n; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n)); load(); }
+    function changeDay(v) { day = Math.max(1, Math.min(28, day + v)); load(); }
+
+    async function updateUI() {
+        let done = 0, total = 3; // +1 за питание
+        if(document.getElementById('h-read').checked) done++;
+        if(document.getElementById('h-sport').checked) done++;
         const cN = parseInt(document.getElementById('cN').value);
-        let s = 0;
-        if(document.getElementById('read').checked) s++;
-        if(document.getElementById('sport').checked) s++;
-        if(cN && Math.abs((cF-cN)/cN) <= 0.15) s++;
-        
-        const p = s / 3;
-        const status = p > 0.6 ? ["🚀", "Супер"] : p > 0.3 ? ["🥇", "Хорошо"] : ["🥉", "Плохо"];
+        const cF = parseInt(document.getElementById('cF_val').innerText);
+        if(cF > 0 && Math.abs(cF - cN) < 200) done++;
+
+        document.querySelectorAll('.c-row').forEach(el => {
+            total++;
+            if(el.dataset.type === 'check' && el.querySelector('input').checked) done++;
+            if(el.dataset.type === 'num' && parseInt(el.querySelector('.c-f').value) >= parseInt(el.querySelector('.c-g').value)) done++;
+        });
+
+        const p = done / total;
+        const status = p > 0.8 ? ["🚀", "Супер"] : p > 0.5 ? ["🥇", "Хорошо"] : p > 0.2 ? ["🥈", "Норм"] : ["🥉", "Плохо"];
         document.getElementById('dayEmo').innerText = status[0];
         document.getElementById('dayText').innerText = status[1];
         updateChart();
     }
 
-    function updateChart() {
+    async function updateChart() {
+        let vals = [];
+        for(let i=day-6; i<=day; i++) {
+            const r = await fetch(`${DB_URL}/u/${user}/d${i}.json`);
+            const d = await r.json() || {};
+            vals.push((d.read?1:0) + (d.sport?1:0));
+        }
         const ctx = document.getElementById('mainChart').getContext('2d');
         if(chart) chart.destroy();
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [1, 2, 3, 4, 5], // Упростил для примера
-                datasets: [{ label: 'Прогресс', data: [1, 2, s_val || 0, 1, 3], borderColor: '#74aa50', tension: 0.4 }]
-            },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        });
+        chart = new Chart(ctx, { type: 'line', data: { labels: ['-6','-5','-4','-3','-2','-1','СЕГОДНЯ'], datasets: [{ data: vals, borderColor: '#74aa50', tension: 0.4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
     }
-
-    setUser('Артем');
+    load();
 </script>
 </body>
 </html>
