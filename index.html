@@ -142,7 +142,7 @@
 <script>
     const DB_URL = "https://family-b4799-default-rtdb.europe-west1.firebasedatabase.app/";
     let user = 'Артем', day = new Date().getDate(), chart;
-    let fullData = {}; // Локальный кэш данных из облака
+    let fullData = {}; 
 
     async function setUser(n) { 
         user = n; 
@@ -158,17 +158,18 @@
     async function addHabitSchema() {
         const name = document.getElementById('newH_Name').value;
         if(!name) return;
-        const schema = await getCloud('schema') || [];
+        // Схема теперь сохраняется по пути пользователя
+        const schema = await getCloud(`schemas/${user}`) || [];
         schema.push({ id: Date.now(), emo: document.getElementById('newH_Emo').value, name: name, type: document.getElementById('newH_Type').value, inStat: document.getElementById('newH_Stat').checked });
-        await setCloud('schema', schema);
+        await setCloud(`schemas/${user}`, schema);
         document.getElementById('newH_Name').value = ''; 
         await load();
     }
 
     async function delHabitSchema(id) {
-        let schema = await getCloud('schema') || [];
+        let schema = await getCloud(`schemas/${user}`) || [];
         schema = schema.filter(h => h.id !== id);
-        await setCloud('schema', schema); 
+        await setCloud(`schemas/${user}`, schema); 
         await load();
     }
 
@@ -194,10 +195,10 @@
 
     async function load() {
         document.getElementById('dateDisplay').innerText = `${day} Фев`;
-        const schema = await getCloud('schema') || [];
+        // Загрузка индивидуальной схемы пользователя
+        const schema = await getCloud(`schemas/${user}`) || [];
         const d = await getCloud(`days/${user}/d${day}`) || {};
         
-        // Кэшируем все данные пользователя для графика
         fullData[user] = await getCloud(`days/${user}`) || {};
 
         const list = document.getElementById('customHabitsList'); 
@@ -230,7 +231,6 @@
         updateUI();
     }
 
-    // Вспомогательные функции Firebase
     async function setCloud(path, data) {
         await fetch(`${DB_URL}${path}.json`, { method: 'PUT', body: JSON.stringify(data) });
     }
@@ -266,7 +266,7 @@
         const m = parseInt(document.getElementById('vMinus').innerText);
         document.getElementById('balance').innerText = p - m;
 
-        const schema = await getCloud('schema') || [];
+        const schema = await getCloud(`schemas/${user}`) || [];
         const d = await getCloud(`days/${user}/d${day}`) || {};
         
         let t = 0, dn = 0;
