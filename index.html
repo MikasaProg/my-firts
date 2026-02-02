@@ -45,7 +45,6 @@
         .btn-del { color: var(--danger); background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 5px; }
         .star { color: #f1c40f; margin-left: 5px; font-weight: bold; }
 
-        /* ИСПРАВЛЕННЫЙ БЛОК ВВОДА ЕДЫ */
         .food-input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: stretch; }
         .food-input-group input[type="text"] { flex: 2; min-width: 0; }
         .food-input-group input[type="number"] { flex: 1; min-width: 50px; }
@@ -114,13 +113,11 @@
             <span>Факт: <b id="cF_val">0</b> ккал</span>
             <span id="calStatus"></span>
         </div>
-        
         <div class="food-input-group">
             <input type="text" id="fName" placeholder="Продукт...">
             <input type="number" id="fCal" placeholder="ккал">
             <button class="btn-ok" onclick="addFood()">ОК</button>
         </div>
-
         <button class="toggle-btn" onclick="document.getElementById('foodLog').classList.toggle('active')">▼ Показать съеденное</button>
         <div id="foodLog" class="food-log"></div>
     </div>
@@ -143,27 +140,39 @@
 </div>
 
 <script>
+    const DB_URL = "https://family-b4799-default-rtdb.europe-west1.firebasedatabase.app/";
     let user = 'Артем', day = new Date().getDate(), chart;
+    let fullData = {}; // Локальный кэш данных из облака
 
-    function setUser(n) { user = n; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n)); load(); }
-    function changeDay(v) { day = Math.max(1, Math.min(31, day + v)); load(); }
+    async function setUser(n) { 
+        user = n; 
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n)); 
+        await load(); 
+    }
+    
+    async function changeDay(v) { 
+        day = Math.max(1, Math.min(31, day + v)); 
+        await load(); 
+    }
 
-    function addHabitSchema() {
+    async function addHabitSchema() {
         const name = document.getElementById('newH_Name').value;
         if(!name) return;
-        const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
+        const schema = await getCloud('schema') || [];
         schema.push({ id: Date.now(), emo: document.getElementById('newH_Emo').value, name: name, type: document.getElementById('newH_Type').value, inStat: document.getElementById('newH_Stat').checked });
-        localStorage.setItem(`${user}-schema`, JSON.stringify(schema));
-        document.getElementById('newH_Name').value = ''; load();
+        await setCloud('schema', schema);
+        document.getElementById('newH_Name').value = ''; 
+        await load();
     }
 
-    function delHabitSchema(id) {
-        let schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
+    async function delHabitSchema(id) {
+        let schema = await getCloud('schema') || [];
         schema = schema.filter(h => h.id !== id);
-        localStorage.setItem(`${user}-schema`, JSON.stringify(schema)); load();
+        await setCloud('schema', schema); 
+        await load();
     }
 
-    function save() {
+    async function save() {
         const habitsData = {};
         document.querySelectorAll('.habit-row').forEach(row => {
             const id = row.dataset.id;
@@ -172,20 +181,31 @@
             else { habitsData[id] = { val: parseInt(row.querySelector('.h-val').value) || 0, goal: parseInt(row.querySelector('.h-goal').value) || 0 }; }
         });
         const foodList = Array.from(document.querySelectorAll('.f-item')).map(el => ({ n: el.dataset.n, c: parseInt(el.dataset.c) }));
-        const data = { habits: habitsData, cN: parseInt(document.getElementById('cN').value) || 2000, p: parseInt(document.getElementById('vPlus').innerText) || 0, m: parseInt(document.getElementById('vMinus').innerText) || 0, foodList: foodList };
-        localStorage.setItem(`${user}-d${day}`, JSON.stringify(data)); updateUI();
+        const data = { 
+            habits: habitsData, 
+            cN: parseInt(document.getElementById('cN').value) || 2000, 
+            p: parseInt(document.getElementById('vPlus').innerText) || 0, 
+            m: parseInt(document.getElementById('vMinus').innerText) || 0, 
+            foodList: foodList 
+        };
+        await setCloud(`days/${user}/d${day}`, data);
+        updateUI();
     }
 
-    function load() {
+    async function load() {
         document.getElementById('dateDisplay').innerText = `${day} Фев`;
-        const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
-        const d = JSON.parse(localStorage.getItem(`${user}-d${day}`)) || {};
-        const list = document.getElementById('customHabitsList'); list.innerHTML = '';
+        const schema = await getCloud('schema') || [];
+        const d = await getCloud(`days/${user}/d${day}`) || {};
+        
+        // Кэшируем все данные пользователя для графика
+        fullData[user] = await getCloud(`days/${user}`) || {};
+
+        const list = document.getElementById('customHabitsList'); 
+        list.innerHTML = '';
         
         schema.forEach(h => {
             const val = d.habits ? d.habits[h.id] : null;
-            let isDone = false;
-            let control = '';
+            let isDone = false, control = '';
             
             if(h.type === 'check') {
                 isDone = val === true;
@@ -197,21 +217,27 @@
                 control = `<div><input type="number" class="num-inp h-val" value="${curV}" onchange="save()"> <span style="color:var(--hint)">/</span> <input type="number" class="num-inp h-goal" value="${curG}" onchange="save()"></div>`;
             }
 
-            list.innerHTML += `
-                <div class="row habit-row" data-id="${h.id}" data-type="${h.type}">
-                    <div class="c-item">
-                        <button class="btn-del" onclick="delHabitSchema(${h.id})">×</button>
-                        <span>${h.emo} ${h.name}${isDone ? '<span class="star">⭐</span>' : ''}</span>
-                    </div>
-                    ${control}
-                </div>`;
+            list.innerHTML += `<div class="row habit-row" data-id="${h.id}" data-type="${h.type}">
+                <div class="c-item"><button class="btn-del" onclick="delHabitSchema(${h.id})">×</button>
+                <span>${h.emo} ${h.name}${isDone ? '<span class="star">⭐</span>' : ''}</span></div>${control}</div>`;
         });
         
         document.getElementById('cN').value = d.cN || 2000;
         document.getElementById('vPlus').innerText = d.p || 0;
         document.getElementById('vMinus').innerText = d.m || 0;
         const log = document.getElementById('foodLog'); log.innerHTML = '';
-        (d.foodList || []).forEach(f => renderFoodItem(f.n, f.c)); updateUI();
+        (d.foodList || []).forEach(f => renderFoodItem(f.n, f.c)); 
+        updateUI();
+    }
+
+    // Вспомогательные функции Firebase
+    async function setCloud(path, data) {
+        await fetch(`${DB_URL}${path}.json`, { method: 'PUT', body: JSON.stringify(data) });
+    }
+
+    async function getCloud(path) {
+        const r = await fetch(`${DB_URL}${path}.json`);
+        return await r.json();
     }
 
     function renderFoodItem(n, c) {
@@ -233,16 +259,19 @@
         document.getElementById('mInp').value = ''; save();
     }
 
-    function clearFin() { if(confirm("Сбросить финансы?")) { document.getElementById('vPlus').innerText='0'; document.getElementById('vMinus').innerText='0'; save(); } }
+    function clearFin() { if(confirm("Сбросить?")) { document.getElementById('vPlus').innerText='0'; document.getElementById('vMinus').innerText='0'; save(); } }
 
-    function getDayScore(targetDay) {
-        const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
-        const d = JSON.parse(localStorage.getItem(`${user}-d${targetDay}`)) || {};
-        let t = 0, dn = 0;
+    async function updateUI() {
+        const p = parseInt(document.getElementById('vPlus').innerText);
+        const m = parseInt(document.getElementById('vMinus').innerText);
+        document.getElementById('balance').innerText = p - m;
+
+        const schema = await getCloud('schema') || [];
+        const d = await getCloud(`days/${user}/d${day}`) || {};
         
+        let t = 0, dn = 0;
         schema.forEach(h => {
-            if(!h.inStat) return;
-            t++;
+            if(!h.inStat) return; t++;
             const v = d.habits ? d.habits[h.id] : null;
             if(h.type === 'check' && v === true) dn++;
             if(h.type === 'goal' && v && v.val >= v.goal && v.goal > 0) dn++;
@@ -250,40 +279,34 @@
 
         const cF = (d.foodList || []).reduce((acc, f) => acc + f.c, 0);
         const cN = d.cN || 2000;
-        t++; // Калории
-        if(cF > 0 && (cF/cN >= 0.9 && cF/cN <= 1.1)) dn++;
+        document.getElementById('cF_val').innerText = cF;
+        t++; if(cF > 0 && (cF/cN >= 0.9 && cF/cN <= 1.1)) dn++;
 
-        return { total: t, done: dn, perc: t > 0 ? dn / t : 0, cF: cF, cN: cN };
-    }
-
-    function updateUI() {
-        const p = parseInt(document.getElementById('vPlus').innerText);
-        const m = parseInt(document.getElementById('vMinus').innerText);
-        document.getElementById('balance').innerText = p - m;
-
-        const score = getDayScore(day);
-        document.getElementById('cF_val').innerText = score.cF;
-
+        const perc = t > 0 ? dn / t : 0;
         const calStatus = document.getElementById('calStatus');
-        const diff = score.cF / score.cN;
-        if (score.cF === 0) { calStatus.innerText = ""; }
+        const diff = cF / cN;
+        if (cF === 0) calStatus.innerText = "";
         else if (diff <= 1.1 && diff >= 0.9) { calStatus.innerText = "😊 Норма"; calStatus.style.color = "var(--primary)"; }
-        else if (diff < 0.9) { calStatus.innerText = "🤨 Маловато"; calStatus.style.color = "var(--warning)"; }
-        else if (diff > 1.1 && diff <= 1.3) { calStatus.innerText = "⚠️ Перебор"; calStatus.style.color = "var(--orange)"; }
-        else { calStatus.innerText = "😡 Много!"; calStatus.style.color = "var(--danger)"; }
+        else { calStatus.innerText = diff < 0.9 ? "🤨 Мало" : "⚠️ Перебор"; calStatus.style.color = "var(--orange)"; }
 
-        const st = score.perc >= 0.9 ? ["🚀", "Супер"] : score.perc >= 0.6 ? ["🥇", "Хорошо"] : score.perc >= 0.3 ? ["🥈", "Норм"] : ["🥉", "Плохо"];
+        const st = perc >= 0.9 ? ["🚀", "Супер"] : perc >= 0.6 ? ["🥇", "Хорошо"] : perc >= 0.3 ? ["🥈", "Норм"] : ["🥉", "Плохо"];
         document.getElementById('dayEmo').innerText = st[0];
         document.getElementById('dayText').innerText = st[1];
-        drawChart();
+        drawChart(schema);
     }
 
-    function drawChart() {
+    function drawChart(schema) {
         let scores = [], colors = [];
+        const userData = fullData[user] || {};
         for(let i=1; i<=31; i++) {
-            const s = getDayScore(i);
-            scores.push(s.done);
-            colors.push(s.perc >= 0.9 ? '#74aa50' : s.perc >= 0.6 ? '#f1c40f' : s.perc >= 0.3 ? '#e67e22' : '#e74c3c');
+            const d = userData[`d${i}`] || {};
+            let t = 0, dn = 0;
+            schema.forEach(h => { if(h.inStat) { t++; const v = d.habits ? d.habits[h.id] : null; if(h.type==='check' && v===true) dn++; if(h.type==='goal' && v && v.val >= v.goal) dn++; } });
+            const cF = (d.foodList || []).reduce((acc, f) => acc + f.c, 0);
+            t++; if(cF > 0 && (cF/(d.cN||2000) >= 0.9 && cF/(d.cN||2000) <= 1.1)) dn++;
+            const p = t > 0 ? dn / t : 0;
+            scores.push(dn);
+            colors.push(p >= 0.9 ? '#74aa50' : p >= 0.6 ? '#f1c40f' : p >= 0.3 ? '#e67e22' : '#e74c3c');
         }
         const ctx = document.getElementById('mainChart').getContext('2d');
         if(chart) chart.destroy();
