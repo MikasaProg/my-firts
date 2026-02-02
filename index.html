@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Tracker Final</title>
+    <title>Family Tracker Elite</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -24,13 +24,12 @@
         .tab-btn.active { background: var(--card); color: var(--primary); }
         .day-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--card); padding: 8px 15px; border-radius: 12px; }
         .section-card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; }
-        .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.03); }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         input, select { padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
         .btn-ok { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-del { color: var(--danger); border: none; background: none; font-size: 18px; cursor: pointer; font-weight: bold; }
+        .btn-del { color: var(--danger); border: none; background: none; font-size: 18px; cursor: pointer; font-weight: bold; padding: 0 5px; }
+        .food-log { font-size: 11px; color: var(--hint); margin-top: 8px; display: none; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 10px; }
         .num-input { width: 45px; text-align: center; border: none; background: rgba(0,0,0,0.03); border-radius: 5px; }
-        .food-log { font-size: 11px; color: var(--hint); margin-top: 8px; display: none; }
-        .stat-badge { font-size: 10px; padding: 2px 6px; border-radius: 5px; font-weight: bold; margin-top: 4px; display: inline-block; }
         #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; font-weight: bold; }
     </style>
 </head>
@@ -47,7 +46,7 @@
             <div style="font-size:10px; color:var(--hint)">ЦЕЛЬ ДНЯ</div>
         </div>
         <div class="status-item">
-            <span id="weekEmo" class="status-emoji">⏳</span>
+            <span id="weekEmo" class="status-emoji">📉</span>
             <span id="weekText" style="font-weight:bold; font-size:14px;">...</span>
             <div style="font-size:10px; color:var(--hint)">НЕДЕЛЯ</div>
         </div>
@@ -69,10 +68,14 @@
         <div class="row"><span>📖 Чтение</span><input type="checkbox" id="h-read" onchange="save()"></div>
         <div class="row"><span>🏋️ Спорт</span><input type="checkbox" id="h-sport" onchange="save()"></div>
         <div id="customList"></div>
-        <div style="margin-top:10px; display:flex; gap:5px;">
-            <input type="text" id="newName" placeholder="Новая привычка..." style="flex:1">
+        <div style="margin-top:10px; display:flex; flex-wrap: wrap; gap:5px;">
+            <select id="newEmo" style="font-size:18px;"><option>🎯</option><option>💧</option><option>👟</option><option>💊</option><option>🧘</option></select>
+            <input type="text" id="newName" placeholder="Название..." style="flex:1">
             <select id="newType"><option value="check">☑️</option><option value="num">🔢</option></select>
-            <button class="btn-ok" onclick="addCustom()">+</button>
+            <div style="font-size: 10px; display: flex; align-items: center; gap: 3px;">
+                <input type="checkbox" id="newInStat" checked> <label for="newInStat">Учитывать</label>
+            </div>
+            <button class="btn-ok" style="width:100%" onclick="addCustom()">Добавить</button>
         </div>
     </div>
 
@@ -84,27 +87,19 @@
             <input type="number" id="fCal" placeholder="ккал" style="width:60px">
             <button class="btn-ok" onclick="addFood()">ОК</button>
         </div>
-        <button onclick="document.getElementById('fLog').style.display='block'" style="background:none; border:none; color:var(--accent); font-size:10px; margin-top:5px;">▼ История еды</button>
+        <button onclick="toggleFoodLog()" style="background:none; border:none; color:var(--accent); font-size:11px; margin-top:8px; cursor:pointer;">▼ История еды</button>
         <div id="fLog" class="food-log"></div>
     </div>
 
     <div class="section-card">
         <h3>💰 Средства: <span id="moneyNet">0</span></h3>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div>
-                <input type="number" id="plusMoney" placeholder="Заработок" style="width:80%">
-                <button class="btn-ok" onclick="modMoney(true)">+</button>
-                <div id="todayPlus" class="stat-badge" style="background:rgba(116,170,80,0.1); color:var(--primary)">Сегодня: +0</div>
-            </div>
-            <div>
-                <input type="number" id="minusMoney" placeholder="Траты" style="width:80%">
-                <button class="btn-ok" style="background:var(--danger)" onclick="modMoney(false)">-</button>
-                <div id="todayMinus" class="stat-badge" style="background:rgba(231,76,60,0.1); color:var(--danger)">Сегодня: -0</div>
-            </div>
+            <div style="display:flex; gap:3px;"><input type="number" id="plusMoney" placeholder="+" style="width:100%"><button class="btn-ok" onclick="modMoney(true)">OK</button></div>
+            <div style="display:flex; gap:3px;"><input type="number" id="minusMoney" placeholder="-" style="width:100%"><button class="btn-ok" style="background:var(--danger)" onclick="modMoney(false)">OK</button></div>
         </div>
     </div>
 
-    <div class="section-card" style="height: 180px;"><canvas id="mainChart"></canvas></div>
+    <div class="section-card" style="height: 200px;"><canvas id="mainChart"></canvas></div>
 </div>
 
 <script>
@@ -114,18 +109,20 @@
 
     async function save() {
         document.getElementById('sync-indicator').innerText = '⏳ Syncing...';
+        const foodItems = Array.from(document.querySelectorAll('.food-item-row')).map(el => ({
+            n: el.dataset.n, c: parseInt(el.dataset.c)
+        }));
         const data = {
             money: parseInt(document.getElementById('moneyNet').innerText),
-            plusToday: parseInt(document.getElementById('todayPlus').innerText.replace(/\D/g,'')) || 0,
-            minusToday: parseInt(document.getElementById('todayMinus').innerText.replace(/\D/g,'')) || 0,
             cN: parseInt(document.getElementById('cN').value) || 2000,
-            cF: parseInt(document.getElementById('cF_val').innerText) || 0,
+            cF: foodItems.reduce((a, b) => a + b.c, 0),
             read: document.getElementById('h-read').checked,
             sport: document.getElementById('h-sport').checked,
-            fLog: document.getElementById('fLog').innerHTML,
+            foodItems: foodItems,
             customs: Array.from(document.querySelectorAll('.c-row')).map(el => ({
                 name: el.querySelector('.c-name').innerText,
                 type: el.dataset.type,
+                inStat: el.dataset.instat === 'true',
                 val: el.dataset.type === 'check' ? el.querySelector('input').checked : parseInt(el.querySelector('.c-f').value) || 0,
                 goal: el.dataset.type === 'num' ? parseInt(el.querySelector('.c-g').value) || 0 : 0
             }))
@@ -142,18 +139,20 @@
         const d = await res.json() || {};
 
         document.getElementById('moneyNet').innerText = d.money || 0;
-        document.getElementById('todayPlus').innerText = `Сегодня: +${d.plusToday || 0}`;
-        document.getElementById('todayMinus').innerText = `Сегодня: -${d.minusToday || 0}`;
         document.getElementById('cN').value = d.cN || 2000;
         document.getElementById('cF_val').innerText = d.cF || 0;
         document.getElementById('h-read').checked = d.read || false;
         document.getElementById('h-sport').checked = d.sport || false;
-        document.getElementById('fLog').innerHTML = d.fLog || '';
         
+        const log = document.getElementById('fLog'); log.innerHTML = '';
+        if(d.foodItems) d.foodItems.forEach(item => {
+            log.innerHTML += `<div class="row food-item-row" data-n="${item.n}" data-c="${item.c}"><span>${item.n} (${item.c})</span><button class="btn-del" onclick="removeFood(this)">×</button></div>`;
+        });
+
         const cont = document.getElementById('customList'); cont.innerHTML = '';
         if(d.customs) d.customs.forEach(c => {
             let ctrl = c.type === 'check' ? `<input type="checkbox" ${c.val?'checked':''} onchange="save()">` : `<div style="display:flex; gap:3px;"><input type="number" class="num-input c-f" value="${c.val}" onchange="save()"><small>/</small><input type="number" class="num-input c-g" value="${c.goal}" onchange="save()"></div>`;
-            cont.innerHTML += `<div class="row c-row" data-type="${c.type}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${c.name}</span></div>${ctrl}</div>`;
+            cont.innerHTML += `<div class="row c-row" data-type="${c.type}" data-instat="${c.inStat || false}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${c.name}</span>${c.inStat ? '⭐' : ''}</div>${ctrl}</div>`;
         });
         document.getElementById('loading').style.display = 'none';
         updateUI();
@@ -162,28 +161,29 @@
     function addFood() {
         const n = document.getElementById('fName').value || 'Еда';
         const c = parseInt(document.getElementById('fCal').value) || 0;
-        document.getElementById('cF_val').innerText = parseInt(document.getElementById('cF_val').innerText) + c;
-        document.getElementById('fLog').innerHTML += `<div>${n}: ${c} ккал</div>`;
-        document.getElementById('fName').value = ''; document.getElementById('fCal').value = '';
-        save();
+        document.getElementById('fLog').innerHTML += `<div class="row food-item-row" data-n="${n}" data-c="${c}"><span>${n} (${c})</span><button class="btn-del" onclick="removeFood(this)">×</button></div>`;
+        document.getElementById('fName').value = ''; document.getElementById('fCal').value = ''; save();
     }
 
+    function removeFood(btn) { btn.closest('.food-item-row').remove(); save(); }
+    function toggleFoodLog() { const l = document.getElementById('fLog'); l.style.display = l.style.display === 'block' ? 'none' : 'block'; }
+
     function addCustom() {
-        const name = "🎯 " + document.getElementById('newName').value;
+        const name = document.getElementById('newEmo').value + " " + document.getElementById('newName').value;
         const type = document.getElementById('newType').value;
+        const inStat = document.getElementById('newInStat').checked;
         if(!document.getElementById('newName').value) return;
+        
         let ctrl = type === 'check' ? `<input type="checkbox" onchange="save()">` : `<div style="display:flex; gap:3px;"><input type="number" class="num-input c-f" value="0" onchange="save()"><small>/</small><input type="number" class="num-input c-g" value="10" onchange="save()"></div>`;
-        document.getElementById('customList').innerHTML += `<div class="row c-row" data-type="${type}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${name}</span></div>${ctrl}</div>`;
+        document.getElementById('customList').innerHTML += `<div class="row c-row" data-type="${type}" data-instat="${inStat}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${name}</span>${inStat ? '⭐' : ''}</div>${ctrl}</div>`;
         document.getElementById('newName').value = ''; save();
     }
 
-    function modMoney(isPlus) {
-        const id = isPlus ? 'plusMoney' : 'minusMoney';
-        const statId = isPlus ? 'todayPlus' : 'todayMinus';
-        const val = parseInt(document.getElementById(id).value) || 0;
-        document.getElementById('moneyNet').innerText = isPlus ? parseInt(document.getElementById('moneyNet').innerText) + val : parseInt(document.getElementById('moneyNet').innerText) - val;
-        const curStat = parseInt(document.getElementById(statId).innerText.replace(/\D/g,'')) || 0;
-        document.getElementById(statId).innerText = `Сегодня: ${isPlus?'+':'-'}${curStat + val}`;
+    function modMoney(isP) {
+        const id = isP ? 'plusMoney' : 'minusMoney';
+        const v = parseInt(document.getElementById(id).value) || 0;
+        const net = parseInt(document.getElementById('moneyNet').innerText);
+        document.getElementById('moneyNet').innerText = isP ? net + v : net - v;
         document.getElementById(id).value = ''; save();
     }
 
@@ -191,17 +191,19 @@
     function changeDay(v) { day = Math.max(1, Math.min(28, day + v)); load(); }
 
     async function updateUI() {
-        let done = 0, total = 3; // +1 за питание
+        let done = 0, total = 3;
+        const cF = Array.from(document.querySelectorAll('.food-item-row')).reduce((a, b) => a + parseInt(b.dataset.c), 0);
+        document.getElementById('cF_val').innerText = cF;
         if(document.getElementById('h-read').checked) done++;
         if(document.getElementById('h-sport').checked) done++;
-        const cN = parseInt(document.getElementById('cN').value);
-        const cF = parseInt(document.getElementById('cF_val').innerText);
-        if(cF > 0 && Math.abs(cF - cN) < 200) done++;
-
+        if(cF > 0 && Math.abs(cF - parseInt(document.getElementById('cN').value)) < 200) done++;
+        
         document.querySelectorAll('.c-row').forEach(el => {
-            total++;
-            if(el.dataset.type === 'check' && el.querySelector('input').checked) done++;
-            if(el.dataset.type === 'num' && parseInt(el.querySelector('.c-f').value) >= parseInt(el.querySelector('.c-g').value)) done++;
+            if(el.dataset.instat === 'true') {
+                total++;
+                if(el.dataset.type === 'check' && el.querySelector('input').checked) done++;
+                if(el.dataset.type === 'num' && parseInt(el.querySelector('.c-f').value) >= parseInt(el.querySelector('.c-g').value)) done++;
+            }
         });
 
         const p = done / total;
@@ -212,15 +214,24 @@
     }
 
     async function updateChart() {
-        let vals = [];
-        for(let i=day-6; i<=day; i++) {
+        let vals = [], labels = [];
+        for(let i = day - 6; i <= day; i++) {
+            if (i <= 0) continue;
+            labels.push(i);
             const r = await fetch(`${DB_URL}/u/${user}/d${i}.json`);
             const d = await r.json() || {};
-            vals.push((d.read?1:0) + (d.sport?1:0));
+            let s = (d.read?1:0) + (d.sport?1:0);
+            if(d.customs) d.customs.forEach(c => { 
+                if(c.inStat) {
+                    if(c.type==='check' && c.val) s++; 
+                    if(c.type==='num' && c.val>=c.goal) s++; 
+                }
+            });
+            vals.push(s);
         }
         const ctx = document.getElementById('mainChart').getContext('2d');
         if(chart) chart.destroy();
-        chart = new Chart(ctx, { type: 'line', data: { labels: ['-6','-5','-4','-3','-2','-1','СЕГОДНЯ'], datasets: [{ data: vals, borderColor: '#74aa50', tension: 0.4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        chart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ data: vals, borderColor: '#74aa50', tension: 0.4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
     }
     load();
 </script>
