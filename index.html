@@ -8,230 +8,279 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #74aa50; --danger: #e74c3c; --accent: #4a90e2;
-            --bg: var(--tg-theme-bg-color, #f4f7f6);
-            --card: var(--tg-theme-secondary-bg-color, #ffffff);
-            --text: var(--tg-theme-text-color, #333);
-            --hint: var(--tg-theme-hint-color, #888);
+            --bg: var(--tg-theme-bg-color, #1c2127);
+            --card: var(--tg-theme-secondary-bg-color, #242b33);
+            --text: var(--tg-theme-text-color, #ffffff);
+            --hint: var(--tg-theme-hint-color, #8b95a1);
+            --primary: #74aa50;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --orange: #e67e22;
+            --accent: #4a90e2;
         }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--text); }
-        .sync-mini { position: fixed; top: 5px; right: 10px; font-size: 10px; opacity: 0.6; }
+
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; overscroll-behavior: none; }
+        .app-container { max-width: 600px; margin: 0 auto; }
+
         .status-header { display: flex; gap: 10px; margin-bottom: 15px; }
-        .status-item { flex: 1; background: var(--card); padding: 12px; border-radius: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .status-emoji { font-size: 28px; display: block; }
-        .user-tabs { display: flex; background: rgba(0,0,0,0.05); padding: 3px; border-radius: 12px; margin-bottom: 15px; }
-        .tab-btn { flex: 1; padding: 8px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: none; color: var(--text); }
+        .status-item { flex: 1; background: var(--card); padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-emoji { font-size: 24px; display: block; }
+        .status-val { font-weight: bold; font-size: 14px; display: block; margin: 4px 0; }
+        .status-label { font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .user-tabs { display: flex; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 15px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; border-radius: 12px; background: none; color: var(--text); font-weight: bold; cursor: pointer; }
         .tab-btn.active { background: var(--card); color: var(--primary); }
-        .day-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--card); padding: 8px 15px; border-radius: 12px; }
-        .section-card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; }
-        .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        input, select { padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
-        .btn-ok { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-del { color: var(--danger); border: none; background: none; font-size: 18px; cursor: pointer; font-weight: bold; padding: 0 5px; }
-        .food-log { font-size: 11px; color: var(--hint); margin-top: 8px; display: none; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 10px; }
-        .num-input { width: 45px; text-align: center; border: none; background: rgba(0,0,0,0.03); border-radius: 5px; }
-        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; font-weight: bold; }
+
+        .day-nav { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 10px 15px; border-radius: 15px; margin-bottom: 15px; }
+        .nav-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 5px 15px; border-radius: 10px; }
+
+        .section-card { background: var(--card); padding: 15px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h3 { margin: 0 0 15px 0; font-size: 14px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        input, select { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 10px; outline: none; }
+        
+        .c-item { display: flex; align-items: center; gap: 8px; }
+        .btn-del { color: var(--danger); background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 5px; }
+        .star { color: #f1c40f; margin-left: 5px; font-weight: bold; }
+
+        .food-log { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 12px; display: none; font-size: 13px; }
+        .food-log.active { display: block; }
+        .toggle-btn { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; }
+
+        .fin-summary { display: flex; gap: 20px; align-items: center; margin-bottom: 15px; font-weight: bold; font-size: 13px; }
+        .v-plus { color: var(--primary); }
+        .v-minus { color: var(--danger); }
+        .btn-clear { background: none; border: none; font-size: 20px; cursor: pointer; }
+
+        .btn-ok { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-red { background: var(--danger); }
+        .num-inp { width: 45px; text-align: center; padding: 4px; }
+        #calStatus { font-weight: bold; font-size: 13px; margin-left: 10px; }
     </style>
 </head>
 <body>
-
-<div id="sync-indicator" class="sync-mini">☁️ Sync OK</div>
-<div id="loading">Загрузка...</div>
 
 <div class="app-container">
     <div class="status-header">
         <div class="status-item">
             <span id="dayEmo" class="status-emoji">😴</span>
-            <span id="dayText" style="font-weight:bold; font-size:14px;">Ожидание</span>
-            <div style="font-size:10px; color:var(--hint)">ЦЕЛЬ ДНЯ</div>
+            <span id="dayText" class="status-val">...</span>
+            <span class="status-label">Результат</span>
         </div>
         <div class="status-item">
-            <span id="weekEmo" class="status-emoji">📉</span>
-            <span id="weekText" style="font-weight:bold; font-size:14px;">...</span>
-            <div style="font-size:10px; color:var(--hint)">НЕДЕЛЯ</div>
+            <span id="monthEmo" class="status-emoji">⏳</span>
+            <span id="monthText" class="status-val">...</span>
+            <span class="status-label">Неделя</span>
         </div>
     </div>
 
     <div class="user-tabs">
-        <button id="btn-Артем" class="tab-btn active" onclick="switchUser('Артем')">Артем</button>
-        <button id="btn-Вероника" class="tab-btn" onclick="switchUser('Вероника')">Вероника</button>
+        <button id="btn-Артем" class="tab-btn active" onclick="setUser('Артем')">Артем</button>
+        <button id="btn-Вероника" class="tab-btn" onclick="setUser('Вероника')">Вероника</button>
     </div>
 
     <div class="day-nav">
-        <button class="btn-ok" onclick="changeDay(-1)">❮</button>
+        <button class="nav-btn" onclick="changeDay(-1)">❮</button>
         <b id="dateDisplay">...</b>
-        <button class="btn-ok" onclick="changeDay(1)">❯</button>
+        <button class="nav-btn" onclick="changeDay(1)">❯</button>
     </div>
 
     <div class="section-card">
         <h3>📜 Привычки</h3>
-        <div class="row"><span>📖 Чтение</span><input type="checkbox" id="h-read" onchange="save()"></div>
-        <div class="row"><span>🏋️ Спорт</span><input type="checkbox" id="h-sport" onchange="save()"></div>
-        <div id="customList"></div>
-        <div style="margin-top:10px; display:flex; flex-wrap: wrap; gap:5px;">
-            <select id="newEmo" style="font-size:18px;"><option>🎯</option><option>💧</option><option>👟</option><option>💊</option><option>🧘</option></select>
-            <input type="text" id="newName" placeholder="Название..." style="flex:1">
-            <select id="newType"><option value="check">☑️</option><option value="num">🔢</option></select>
-            <div style="font-size: 10px; display: flex; align-items: center; gap: 3px;">
-                <input type="checkbox" id="newInStat" checked> <label for="newInStat">Учитывать</label>
+        <div id="customHabitsList"></div>
+        <div style="margin-top:15px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.1);">
+            <div style="display:grid; grid-template-columns: 50px 1fr 70px; gap:5px; margin-bottom:8px;">
+                <select id="newH_Emo"><option>🎯</option><option>💧</option><option>👟</option><option>🧘</option><option>💊</option><option>🍎</option></select>
+                <input type="text" id="newH_Name" placeholder="Название...">
+                <select id="newH_Type"><option value="check">☑️</option><option value="goal">🔢</option></select>
             </div>
-            <button class="btn-ok" style="width:100%" onclick="addCustom()">Добавить</button>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="font-size:12px; color:var(--hint)"><input type="checkbox" id="newH_Stat" checked> Учитывать</label>
+                <button class="btn-ok" onclick="addHabitSchema()" style="padding: 5px 15px;">Добавить</button>
+            </div>
         </div>
     </div>
 
     <div class="section-card">
-        <h3>🍎 Питание (Цель: <input type="number" id="cN" style="width:50px; border:none; background:none; font-weight:bold" onchange="save()">)</h3>
-        <div>Факт: <b id="cF_val">0</b> ккал</div>
-        <div style="display:flex; gap:5px; margin-top:10px;">
-            <input type="text" id="fName" placeholder="Еда..." style="flex:1">
-            <input type="number" id="fCal" placeholder="ккал" style="width:60px">
+        <h3>🍎 Питание (Цель: <input type="number" id="cN" style="width:60px; background:none; border:none; padding:0;" onchange="save()">)</h3>
+        <div style="margin-bottom: 10px; display: flex; align-items: center;">
+            <span>Факт: <b id="cF_val">0</b> ккал</span>
+            <span id="calStatus"></span>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input type="text" id="fName" placeholder="Продукт..." style="flex:2">
+            <input type="number" id="fCal" placeholder="ккал" style="flex:1">
             <button class="btn-ok" onclick="addFood()">ОК</button>
         </div>
-        <button onclick="toggleFoodLog()" style="background:none; border:none; color:var(--accent); font-size:11px; margin-top:8px; cursor:pointer;">▼ История еды</button>
-        <div id="fLog" class="food-log"></div>
+        <button class="toggle-btn" onclick="document.getElementById('foodLog').classList.toggle('active')">▼ Показать съеденное</button>
+        <div id="foodLog" class="food-log"></div>
     </div>
 
     <div class="section-card">
-        <h3>💰 Средства: <span id="moneyNet">0</span></h3>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div style="display:flex; gap:3px;"><input type="number" id="plusMoney" placeholder="+" style="width:100%"><button class="btn-ok" onclick="modMoney(true)">OK</button></div>
-            <div style="display:flex; gap:3px;"><input type="number" id="minusMoney" placeholder="-" style="width:100%"><button class="btn-ok" style="background:var(--danger)" onclick="modMoney(false)">OK</button></div>
+        <h3>💰 Финансы (Баланс: <span id="balance">0</span>)</h3>
+        <div class="fin-summary">
+            <span>ПРИБЫЛЬ: <span id="vPlus" class="v-plus">0</span></span>
+            <span>ТРАТЫ: <span id="vMinus" class="v-minus">0</span></span>
+            <button class="btn-clear" onclick="clearFin()">🧹</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <input type="number" id="mInp" placeholder="Сумма..." style="flex:1">
+            <button class="btn-ok" onclick="modMoney(true)">+</button>
+            <button class="btn-ok btn-red" onclick="modMoney(false)">-</button>
         </div>
     </div>
 
-    <div class="section-card" style="height: 200px;"><canvas id="mainChart"></canvas></div>
+    <div class="section-card chart-box"><canvas id="mainChart"></canvas></div>
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    const DB_URL = "https://family-b4799-default-rtdb.europe-west1.firebasedatabase.app/"; 
     let user = 'Артем', day = new Date().getDate(), chart;
 
-    async function save() {
-        document.getElementById('sync-indicator').innerText = '⏳ Syncing...';
-        const foodItems = Array.from(document.querySelectorAll('.food-item-row')).map(el => ({
-            n: el.dataset.n, c: parseInt(el.dataset.c)
-        }));
-        const data = {
-            money: parseInt(document.getElementById('moneyNet').innerText),
-            cN: parseInt(document.getElementById('cN').value) || 2000,
-            cF: foodItems.reduce((a, b) => a + b.c, 0),
-            read: document.getElementById('h-read').checked,
-            sport: document.getElementById('h-sport').checked,
-            foodItems: foodItems,
-            customs: Array.from(document.querySelectorAll('.c-row')).map(el => ({
-                name: el.querySelector('.c-name').innerText,
-                type: el.dataset.type,
-                inStat: el.dataset.instat === 'true',
-                val: el.dataset.type === 'check' ? el.querySelector('input').checked : parseInt(el.querySelector('.c-f').value) || 0,
-                goal: el.dataset.type === 'num' ? parseInt(el.querySelector('.c-g').value) || 0 : 0
-            }))
-        };
-        await fetch(`${DB_URL}/u/${user}/d${day}.json`, { method: 'PUT', body: JSON.stringify(data) });
-        document.getElementById('sync-indicator').innerText = '☁️ Sync OK';
-        updateUI();
+    function setUser(n) { user = n; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n)); load(); }
+    function changeDay(v) { day = Math.max(1, Math.min(31, day + v)); load(); }
+
+    function addHabitSchema() {
+        const name = document.getElementById('newH_Name').value;
+        if(!name) return;
+        const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
+        schema.push({ id: Date.now(), emo: document.getElementById('newH_Emo').value, name: name, type: document.getElementById('newH_Type').value, inStat: document.getElementById('newH_Stat').checked });
+        localStorage.setItem(`${user}-schema`, JSON.stringify(schema));
+        document.getElementById('newH_Name').value = ''; load();
     }
 
-    async function load() {
-        document.getElementById('loading').style.display = 'flex';
+    function delHabitSchema(id) {
+        let schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
+        schema = schema.filter(h => h.id !== id);
+        localStorage.setItem(`${user}-schema`, JSON.stringify(schema)); load();
+    }
+
+    function save() {
+        const habitsData = {};
+        document.querySelectorAll('.habit-row').forEach(row => {
+            const id = row.dataset.id;
+            const type = row.dataset.type;
+            if(type === 'check') { habitsData[id] = row.querySelector('input[type="checkbox"]').checked; } 
+            else { habitsData[id] = { val: parseInt(row.querySelector('.h-val').value) || 0, goal: parseInt(row.querySelector('.h-goal').value) || 0 }; }
+        });
+        const foodList = Array.from(document.querySelectorAll('.f-item')).map(el => ({ n: el.dataset.n, c: parseInt(el.dataset.c) }));
+        const data = { habits: habitsData, cN: parseInt(document.getElementById('cN').value) || 2000, p: parseInt(document.getElementById('vPlus').innerText) || 0, m: parseInt(document.getElementById('vMinus').innerText) || 0, foodList: foodList };
+        localStorage.setItem(`${user}-d${day}`, JSON.stringify(data)); updateUI();
+    }
+
+    function load() {
         document.getElementById('dateDisplay').innerText = `${day} Февраля`;
-        const res = await fetch(`${DB_URL}/u/${user}/d${day}.json`);
-        const d = await res.json() || {};
-
-        document.getElementById('moneyNet').innerText = d.money || 0;
-        document.getElementById('cN').value = d.cN || 2000;
-        document.getElementById('cF_val').innerText = d.cF || 0;
-        document.getElementById('h-read').checked = d.read || false;
-        document.getElementById('h-sport').checked = d.sport || false;
+        const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
+        const d = JSON.parse(localStorage.getItem(`${user}-d${day}`)) || {};
+        const list = document.getElementById('customHabitsList'); list.innerHTML = '';
         
-        const log = document.getElementById('fLog'); log.innerHTML = '';
-        if(d.foodItems) d.foodItems.forEach(item => {
-            log.innerHTML += `<div class="row food-item-row" data-n="${item.n}" data-c="${item.c}"><span>${item.n} (${item.c})</span><button class="btn-del" onclick="removeFood(this)">×</button></div>`;
-        });
+        schema.forEach(h => {
+            const val = d.habits ? d.habits[h.id] : null;
+            let isDone = false;
+            let control = '';
+            
+            if(h.type === 'check') {
+                isDone = val === true;
+                control = `<input type="checkbox" onchange="save()" ${isDone ? 'checked' : ''}>`;
+            } else {
+                const curV = val ? val.val : 0;
+                const curG = val ? val.goal : 10;
+                isDone = curV >= curG && curG > 0;
+                control = `<div><input type="number" class="num-inp h-val" value="${curV}" onchange="save()"> <span style="color:var(--hint)">/</span> <input type="number" class="num-inp h-goal" value="${curG}" onchange="save()"></div>`;
+            }
 
-        const cont = document.getElementById('customList'); cont.innerHTML = '';
-        if(d.customs) d.customs.forEach(c => {
-            let ctrl = c.type === 'check' ? `<input type="checkbox" ${c.val?'checked':''} onchange="save()">` : `<div style="display:flex; gap:3px;"><input type="number" class="num-input c-f" value="${c.val}" onchange="save()"><small>/</small><input type="number" class="num-input c-g" value="${c.goal}" onchange="save()"></div>`;
-            cont.innerHTML += `<div class="row c-row" data-type="${c.type}" data-instat="${c.inStat || false}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${c.name}</span>${c.inStat ? '⭐' : ''}</div>${ctrl}</div>`;
+            list.innerHTML += `
+                <div class="row habit-row" data-id="${h.id}" data-type="${h.type}">
+                    <div class="c-item">
+                        <button class="btn-del" onclick="delHabitSchema(${h.id})">×</button>
+                        <span>${h.emo} ${h.name}${isDone ? '<span class="star">⭐</span>' : ''}</span>
+                    </div>
+                    ${control}
+                </div>`;
         });
-        document.getElementById('loading').style.display = 'none';
-        updateUI();
+        
+        document.getElementById('cN').value = d.cN || 2000;
+        document.getElementById('vPlus').innerText = d.p || 0;
+        document.getElementById('vMinus').innerText = d.m || 0;
+        const log = document.getElementById('foodLog'); log.innerHTML = '';
+        (d.foodList || []).forEach(f => renderFoodItem(f.n, f.c)); updateUI();
+    }
+
+    function renderFoodItem(n, c) {
+        const div = document.createElement('div'); div.className = 'f-item'; div.dataset.n = n; div.dataset.c = c;
+        div.style = "display:flex; justify-content:space-between; margin-bottom:8px;";
+        div.innerHTML = `<span>${n} (${c} ккал)</span><button class="btn-del" onclick="this.parentElement.remove(); save();">×</button>`;
+        document.getElementById('foodLog').appendChild(div);
     }
 
     function addFood() {
         const n = document.getElementById('fName').value || 'Еда';
         const c = parseInt(document.getElementById('fCal').value) || 0;
-        document.getElementById('fLog').innerHTML += `<div class="row food-item-row" data-n="${n}" data-c="${c}"><span>${n} (${c})</span><button class="btn-del" onclick="removeFood(this)">×</button></div>`;
-        document.getElementById('fName').value = ''; document.getElementById('fCal').value = ''; save();
-    }
-
-    function removeFood(btn) { btn.closest('.food-item-row').remove(); save(); }
-    function toggleFoodLog() { const l = document.getElementById('fLog'); l.style.display = l.style.display === 'block' ? 'none' : 'block'; }
-
-    function addCustom() {
-        const name = document.getElementById('newEmo').value + " " + document.getElementById('newName').value;
-        const type = document.getElementById('newType').value;
-        const inStat = document.getElementById('newInStat').checked;
-        if(!document.getElementById('newName').value) return;
-        
-        let ctrl = type === 'check' ? `<input type="checkbox" onchange="save()">` : `<div style="display:flex; gap:3px;"><input type="number" class="num-input c-f" value="0" onchange="save()"><small>/</small><input type="number" class="num-input c-g" value="10" onchange="save()"></div>`;
-        document.getElementById('customList').innerHTML += `<div class="row c-row" data-type="${type}" data-instat="${inStat}"><div style="display:flex; align-items:center;"><button class="btn-del" onclick="this.closest('.row').remove(); save();">×</button><span class="c-name">${name}</span>${inStat ? '⭐' : ''}</div>${ctrl}</div>`;
-        document.getElementById('newName').value = ''; save();
+        if(c > 0) { renderFoodItem(n, c); document.getElementById('fName').value = ''; document.getElementById('fCal').value = ''; save(); }
     }
 
     function modMoney(isP) {
-        const id = isP ? 'plusMoney' : 'minusMoney';
-        const v = parseInt(document.getElementById(id).value) || 0;
-        const net = parseInt(document.getElementById('moneyNet').innerText);
-        document.getElementById('moneyNet').innerText = isP ? net + v : net - v;
-        document.getElementById(id).value = ''; save();
+        const id = isP ? 'vPlus' : 'vMinus';
+        document.getElementById(id).innerText = (parseInt(document.getElementById(id).innerText) || 0) + (parseInt(document.getElementById('mInp').value) || 0);
+        document.getElementById('mInp').value = ''; save();
     }
 
-    function switchUser(n) { user = n; document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n)); load(); }
-    function changeDay(v) { day = Math.max(1, Math.min(28, day + v)); load(); }
+    function clearFin() { if(confirm("Сбросить финансы?")) { document.getElementById('vPlus').innerText='0'; document.getElementById('vMinus').innerText='0'; save(); } }
 
-    async function updateUI() {
-        let done = 0, total = 3;
-        const cF = Array.from(document.querySelectorAll('.food-item-row')).reduce((a, b) => a + parseInt(b.dataset.c), 0);
-        document.getElementById('cF_val').innerText = cF;
-        if(document.getElementById('h-read').checked) done++;
-        if(document.getElementById('h-sport').checked) done++;
-        if(cF > 0 && Math.abs(cF - parseInt(document.getElementById('cN').value)) < 200) done++;
+    function getDayScore(targetDay) {
+        const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
+        const d = JSON.parse(localStorage.getItem(`${user}-d${targetDay}`)) || {};
+        let t = 0, dn = 0;
         
-        document.querySelectorAll('.c-row').forEach(el => {
-            if(el.dataset.instat === 'true') {
-                total++;
-                if(el.dataset.type === 'check' && el.querySelector('input').checked) done++;
-                if(el.dataset.type === 'num' && parseInt(el.querySelector('.c-f').value) >= parseInt(el.querySelector('.c-g').value)) done++;
-            }
+        schema.forEach(h => {
+            if(!h.inStat) return;
+            t++;
+            const v = d.habits ? d.habits[h.id] : null;
+            if(h.type === 'check' && v === true) dn++;
+            if(h.type === 'goal' && v && v.val >= v.goal && v.goal > 0) dn++;
         });
 
-        const p = done / total;
-        const status = p > 0.8 ? ["🚀", "Супер"] : p > 0.5 ? ["🥇", "Хорошо"] : p > 0.2 ? ["🥈", "Норм"] : ["🥉", "Плохо"];
-        document.getElementById('dayEmo').innerText = status[0];
-        document.getElementById('dayText').innerText = status[1];
-        updateChart();
+        const cF = (d.foodList || []).reduce((acc, f) => acc + f.c, 0);
+        const cN = d.cN || 2000;
+        t++; // Калории всегда в статистике
+        if(cF > 0 && (cF/cN >= 0.9 && cF/cN <= 1.1)) dn++;
+
+        return { total: t, done: dn, perc: t > 0 ? dn / t : 0, cF: cF, cN: cN };
     }
 
-    async function updateChart() {
-        let vals = [], labels = [];
-        for(let i = day - 6; i <= day; i++) {
-            if (i <= 0) continue;
-            labels.push(i);
-            const r = await fetch(`${DB_URL}/u/${user}/d${i}.json`);
-            const d = await r.json() || {};
-            let s = (d.read?1:0) + (d.sport?1:0);
-            if(d.customs) d.customs.forEach(c => { 
-                if(c.inStat) {
-                    if(c.type==='check' && c.val) s++; 
-                    if(c.type==='num' && c.val>=c.goal) s++; 
-                }
-            });
-            vals.push(s);
+    function updateUI() {
+        const p = parseInt(document.getElementById('vPlus').innerText);
+        const m = parseInt(document.getElementById('vMinus').innerText);
+        document.getElementById('balance').innerText = p - m;
+
+        const score = getDayScore(day);
+        document.getElementById('cF_val').innerText = score.cF;
+
+        const calStatus = document.getElementById('calStatus');
+        const diff = score.cF / score.cN;
+        if (score.cF === 0) { calStatus.innerText = ""; }
+        else if (diff <= 1.1 && diff >= 0.9) { calStatus.innerText = "😊 Норма"; calStatus.style.color = "var(--primary)"; }
+        else if (diff < 0.9) { calStatus.innerText = "🤨 Маловато"; calStatus.style.color = "var(--warning)"; }
+        else if (diff > 1.1 && diff <= 1.3) { calStatus.innerText = "⚠️ Перебор"; calStatus.style.color = "var(--orange)"; }
+        else { calStatus.innerText = "😡 Много!"; calStatus.style.color = "var(--danger)"; }
+
+        const st = score.perc >= 0.9 ? ["🚀", "Супер"] : score.perc >= 0.6 ? ["🥇", "Хорошо"] : score.perc >= 0.3 ? ["🥈", "Норм"] : ["🥉", "Плохо"];
+        document.getElementById('dayEmo').innerText = st[0];
+        document.getElementById('dayText').innerText = st[1];
+        drawChart();
+    }
+
+    function drawChart() {
+        let scores = [], colors = [];
+        for(let i=1; i<=31; i++) {
+            const s = getDayScore(i);
+            scores.push(s.done);
+            colors.push(s.perc >= 0.9 ? '#74aa50' : s.perc >= 0.6 ? '#f1c40f' : s.perc >= 0.3 ? '#e67e22' : '#e74c3c');
         }
         const ctx = document.getElementById('mainChart').getContext('2d');
         if(chart) chart.destroy();
-        chart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ data: vals, borderColor: '#74aa50', tension: 0.4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        chart = new Chart(ctx, { type: 'bar', data: { labels: Array.from({length:31}, (_,i)=>i+1), datasets: [{ data: scores, backgroundColor: colors, borderRadius: 6 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { color: '#8b95a1', font: { size: 9 } } } } } });
     }
     load();
 </script>
