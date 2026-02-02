@@ -45,16 +45,21 @@
         .btn-del { color: var(--danger); background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 5px; }
         .star { color: #f1c40f; margin-left: 5px; font-weight: bold; }
 
+        /* ИСПРАВЛЕННЫЙ БЛОК ВВОДА ЕДЫ */
+        .food-input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: stretch; }
+        .food-input-group input[type="text"] { flex: 2; min-width: 0; }
+        .food-input-group input[type="number"] { flex: 1; min-width: 50px; }
+        
         .food-log { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 12px; display: none; font-size: 13px; }
         .food-log.active { display: block; }
-        .toggle-btn { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; }
+        .toggle-btn { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 5px 0; }
 
         .fin-summary { display: flex; gap: 20px; align-items: center; margin-bottom: 15px; font-weight: bold; font-size: 13px; }
         .v-plus { color: var(--primary); }
         .v-minus { color: var(--danger); }
         .btn-clear { background: none; border: none; font-size: 20px; cursor: pointer; }
 
-        .btn-ok { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-ok { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .btn-red { background: var(--danger); }
         .num-inp { width: 45px; text-align: center; padding: 4px; }
         #calStatus { font-weight: bold; font-size: 13px; margin-left: 10px; }
@@ -109,11 +114,13 @@
             <span>Факт: <b id="cF_val">0</b> ккал</span>
             <span id="calStatus"></span>
         </div>
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <input type="text" id="fName" placeholder="Продукт..." style="flex:2">
-            <input type="number" id="fCal" placeholder="ккал" style="flex:1">
+        
+        <div class="food-input-group">
+            <input type="text" id="fName" placeholder="Продукт...">
+            <input type="number" id="fCal" placeholder="ккал">
             <button class="btn-ok" onclick="addFood()">ОК</button>
         </div>
+
         <button class="toggle-btn" onclick="document.getElementById('foodLog').classList.toggle('active')">▼ Показать съеденное</button>
         <div id="foodLog" class="food-log"></div>
     </div>
@@ -170,7 +177,7 @@
     }
 
     function load() {
-        document.getElementById('dateDisplay').innerText = `${day} Февраля`;
+        document.getElementById('dateDisplay').innerText = `${day} Фев`;
         const schema = JSON.parse(localStorage.getItem(`${user}-schema`) || '[]');
         const d = JSON.parse(localStorage.getItem(`${user}-d${day}`)) || {};
         const list = document.getElementById('customHabitsList'); list.innerHTML = '';
@@ -243,7 +250,7 @@
 
         const cF = (d.foodList || []).reduce((acc, f) => acc + f.c, 0);
         const cN = d.cN || 2000;
-        t++; // Калории всегда в статистике
+        t++; // Калории
         if(cF > 0 && (cF/cN >= 0.9 && cF/cN <= 1.1)) dn++;
 
         return { total: t, done: dn, perc: t > 0 ? dn / t : 0, cF: cF, cN: cN };
