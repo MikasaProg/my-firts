@@ -3,69 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Cloud Pro</title>
+    <title>Family Cloud Tracker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #74aa50; --danger: #e74c3c; --accent: #4a90e2;
             --bg: var(--tg-theme-bg-color, #f4f7f6);
             --card: var(--tg-theme-secondary-bg-color, #ffffff);
             --text: var(--tg-theme-text-color, #333);
+            --hint: var(--tg-theme-hint-color, #888);
         }
-        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; padding-bottom: 50px; }
-        .card { background: var(--card); padding: 15px; border-radius: 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .flex { display: flex; gap: 8px; margin-top: 10px; }
-        input { padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; background: var(--bg); color: var(--text); flex: 1; outline: none; }
-        .btn { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .user-selector { display: flex; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 12px; margin-bottom: 15px; }
-        .u-btn { flex: 1; border: none; padding: 8px; border-radius: 10px; background: none; color: var(--text); cursor: pointer; transition: 0.3s; }
-        .u-btn.active { background: var(--primary); color: white; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--text); }
+        .app-container { max-width: 600px; margin: 0 auto; }
+        .status-header { display: flex; gap: 10px; margin-bottom: 15px; }
+        .status-item { flex: 1; background: var(--card); padding: 12px; border-radius: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .status-emoji { font-size: 28px; display: block; }
+        .status-text { font-weight: bold; font-size: 0.9em; display: block; margin-top: 5px; }
+        .status-label { font-size: 10px; color: var(--hint); text-transform: uppercase; }
+        .user-tabs { display: flex; border-radius: 12px; background: rgba(0,0,0,0.05); padding: 3px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 8px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; background: none; color: var(--text); }
+        .tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .day-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--card); padding: 8px 15px; border-radius: 12px; }
+        .day-nav button { background: rgba(0,0,0,0.05); border: none; padding: 5px 12px; border-radius: 8px; color: var(--text); }
+        .section-card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; }
+        h3 { margin: 0 0 12px 0; font-size: 1em; color: var(--hint); border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
         .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.03); }
-        .food-item { font-size: 13px; color: var(--accent); padding: 4px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); }
-        #status { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 10px; opacity: 0.6; }
-        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        input { padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
+        .flex-row { display: flex; gap: 5px; }
+        .btn-ok { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-del { color: var(--danger); border: none; background: none; font-weight: bold; cursor: pointer; }
+        .food-list { margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.02); border-radius: 10px; font-size: 12px; display: none; }
+        .food-list.active { display: block; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="loading">Загрузка данных...</div>
+<div id="loading-overlay">Синхронизация...</div>
 
-<div class="user-selector">
-    <button class="u-btn active" id="btn-Artem" onclick="switchUser('Artem')">Артем</button>
-    <button class="u-btn" id="btn-Veronika" onclick="switchUser('Veronika')">Вероника</button>
-</div>
-
-<div class="card" style="text-align: center;">
-    <h2 id="dateDisplay">...</h2>
-    <div id="status">Облако: на связи ✅</div>
-</div>
-
-<div class="card">
-    <h3>💰 Баланс: <span id="moneyNet">0</span> ₽</h3>
-    <div class="flex">
-        <input type="number" id="moneyInp" placeholder="Сумма">
-        <button class="btn" onclick="addMoney(true)">+</button>
-        <button class="btn" style="background:var(--danger)" onclick="addMoney(false)">-</button>
+<div class="app-container">
+    <div class="status-header">
+        <div class="status-item">
+            <span id="dayEmo" class="status-emoji">😴</span>
+            <span id="dayText" class="status-text">...</span>
+            <span class="status-label">Цель дня</span>
+        </div>
+        <div class="status-item">
+            <span id="syncStatus" class="status-emoji">☁️</span>
+            <span id="syncText" class="status-text">ОК</span>
+            <span class="status-label">Облако</span>
+        </div>
     </div>
-</div>
 
-<div class="card">
-    <h3>✅ Привычки</h3>
-    <div id="habitsCont">
-        <div class="row"><span>📖 Чтение</span><input type="checkbox" id="h-read" onchange="sync()"></div>
-        <div class="row"><span>🏋️ Спорт</span><input type="checkbox" id="h-sport" onchange="sync()"></div>
+    <div class="user-tabs">
+        <button id="btn-Артем" class="tab-btn active" onclick="setUser('Артем')">Артем</button>
+        <button id="btn-Вероника" class="tab-btn" onclick="setUser('Вероника')">Вероника</button>
     </div>
-</div>
 
-<div class="card">
-    <h3>🍎 Еда (Цель: 2000)</h3>
-    <div style="font-size: 18px; margin-bottom: 10px;">Факт: <b id="cF">0</b> ккал</div>
-    <div class="flex">
-        <input type="text" id="fName" placeholder="Что съел?">
-        <input type="number" id="fCal" placeholder="ккал" style="width: 70px;">
-        <button class="btn" onclick="addFood()">ОК</button>
+    <div class="day-nav">
+        <button onclick="changeDay(-1)">❮</button>
+        <b id="dateDisplay">...</b>
+        <button onclick="changeDay(1)">❯</button>
     </div>
-    <div id="foodList" style="margin-top: 15px; max-height: 150px; overflow-y: auto;"></div>
+
+    <div class="section-card">
+        <h3>📜 Привычки</h3>
+        <div class="row"><span>📖 Чтение</span><input type="checkbox" id="read" onchange="save()"></div>
+        <div class="row"><span>🏋️ Спорт</span><input type="checkbox" id="sport" onchange="save()"></div>
+        <div id="dynamicList"></div>
+    </div>
+
+    <div class="section-card">
+        <h3>🍎 Питание (Цель: <input type="number" id="cN" style="width:60px; border:none; background:none; font-weight:bold" oninput="save()">)</h3>
+        <div style="font-size:18px; margin-bottom:10px;">Факт: <span id="cF_val">0</span> ккал</div>
+        <div class="flex-row">
+            <input type="text" id="foodName" placeholder="Продукт..." style="flex:1">
+            <input type="number" id="foodCal" placeholder="ккал" style="width:70px">
+            <button class="btn-ok" onclick="addFood()">+</button>
+        </div>
+        <button onclick="document.getElementById('foodLog').classList.toggle('active')" style="background:none; border:none; color:var(--accent); font-size:11px; margin-top:10px;">▼ История еды</button>
+        <div id="foodLog" class="food-list"></div>
+    </div>
+
+    <div class="section-card">
+        <h3>💰 Баланс: <span id="moneyNet">0</span></h3>
+        <div class="flex-row">
+            <input type="number" id="moneyInp" placeholder="Сумма" style="flex:1">
+            <button class="btn-ok" onclick="modMoney(true)">+</button>
+            <button class="btn-ok" style="background:var(--danger)" onclick="modMoney(false)">-</button>
+        </div>
+    </div>
+
+    <div class="section-card" style="height: 180px;">
+        <canvas id="mainChart"></canvas>
+    </div>
 </div>
 
 <script>
@@ -73,80 +105,136 @@
     tg.expand();
 
     const DB_URL = "https://family-b4799-default-rtdb.europe-west1.firebasedatabase.app/"; 
-    let currentUser = "Artem";
-    let dayKey = new Date().toLocaleDateString('ru-RU').replace(/\./g, '-');
+    let user = 'Артем', day = new Date().getDate(), chart;
+    let schema = JSON.parse(localStorage.getItem('schema') || '[]');
 
-    // Главная функция синхронизации (сбор всех данных в объект)
-    async function sync() {
-        const data = {
-            money: parseInt(document.getElementById('moneyNet').innerText),
-            calFact: parseInt(document.getElementById('cF').innerText),
-            habits: {
-                read: document.getElementById('h-read').checked,
-                sport: document.getElementById('h-sport').checked
-            },
-            foods: Array.from(document.querySelectorAll('.food-item')).map(el => el.innerText)
+    async function setUser(n) { 
+        user = n; 
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText === n));
+        await load(); 
+    }
+    
+    async function changeDay(d) { 
+        day = Math.max(1, Math.min(31, day + d)); 
+        await load(); 
+    }
+
+    async function save() {
+        document.getElementById('syncStatus').innerText = '⏳';
+        const d = {
+            r: document.getElementById('read').checked,
+            s: document.getElementById('sport').checked,
+            cN: document.getElementById('cN').value || 2000,
+            cF: parseInt(document.getElementById('cF_val').innerText) || 0,
+            money: parseInt(document.getElementById('moneyNet').innerText) || 0,
+            foodStack: Array.from(document.querySelectorAll('.food-data-item')).map(el => JSON.parse(el.dataset.info))
         };
 
-        await fetch(`${DB_URL}/users/${currentUser}/${dayKey}.json`, {
+        // Сохраняем в Firebase (путь: пользователи / имя / день)
+        await fetch(`${DB_URL}/users/${user}/day${day}.json`, {
             method: 'PUT',
-            body: JSON.stringify(data)
+            body: JSON.stringify(d)
         });
-        tg.HapticFeedback.impactOccurred('light');
-    }
-
-    // Загрузка данных конкретного юзера
-    async function loadData() {
-        document.getElementById('loading').style.display = 'flex';
-        document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'long'});
         
-        const res = await fetch(`${DB_URL}/users/${currentUser}/${dayKey}.json`);
-        const d = await res.json() || {};
+        document.getElementById('syncStatus').innerText = '☁️';
+        updateUI();
+    }
 
-        // Заполняем поля
-        document.getElementById('moneyNet').innerText = d.money || 0;
-        document.getElementById('cF').innerText = d.calFact || 0;
-        document.getElementById('h-read').checked = d.habits?.read || false;
-        document.getElementById('h-sport').checked = d.habits?.sport || false;
+    async function load() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('dateDisplay').innerText = `${day} Февраля`;
         
-        const list = document.getElementById('foodList');
-        list.innerHTML = '';
-        if(d.foods) d.foods.forEach(f => {
-            list.innerHTML += `<div class="food-item">${f}</div>`;
-        });
+        try {
+            const res = await fetch(`${DB_URL}/users/${user}/day${day}.json`);
+            const d = await res.json() || {};
 
-        document.getElementById('loading').style.display = 'none';
-    }
+            document.getElementById('read').checked = d.r || false;
+            document.getElementById('sport').checked = d.s || false;
+            document.getElementById('cN').value = d.cN || 2000;
+            document.getElementById('cF_val').innerText = d.cF || 0;
+            document.getElementById('moneyNet').innerText = d.money || 0;
 
-    function switchUser(name) {
-        currentUser = name;
-        document.querySelectorAll('.u-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('btn-' + name).classList.add('active');
-        loadData();
-    }
+            const log = document.getElementById('foodLog'); 
+            log.innerHTML = '';
+            if(d.foodStack) {
+                d.foodStack.forEach((item, i) => {
+                    log.innerHTML += `<div class="food-data-item" data-info='${JSON.stringify(item)}' style="display:flex; justify-content:space-between; padding:4px 0;">
+                        <span>${item.name}</span><span>${item.cal} <button class="btn-del" onclick="delFood(${i})">×</button></span>
+                    </div>`;
+                });
+            }
+        } catch (e) { console.error("Ошибка сети"); }
 
-    async function addMoney(isPlus) {
-        const val = parseInt(document.getElementById('moneyInp').value) || 0;
-        const cur = parseInt(document.getElementById('moneyNet').innerText);
-        document.getElementById('moneyNet').innerText = isPlus ? cur + val : cur - val;
-        document.getElementById('moneyInp').value = '';
-        await sync();
+        document.getElementById('loading-overlay').style.display = 'none';
+        updateUI();
     }
 
     async function addFood() {
-        const name = document.getElementById('fName').value || "Еда";
-        const cal = parseInt(document.getElementById('fCal').value) || 0;
-        const curFact = parseInt(document.getElementById('cF').innerText);
+        const n = document.getElementById('foodName').value || 'Еда';
+        const c = parseInt(document.getElementById('foodCal').value) || 0;
+        const curFact = parseInt(document.getElementById('cF_val').innerText);
         
-        document.getElementById('cF').innerText = curFact + cal;
-        document.getElementById('foodList').innerHTML += `<div class="food-item">${name} (${cal} ккал)</div>`;
+        document.getElementById('cF_val').innerText = curFact + c;
+        const log = document.getElementById('foodLog');
+        log.innerHTML += `<div class="food-data-item" data-info='${JSON.stringify({name:n, cal:c})}'>${n} - ${c}</div>`;
         
-        document.getElementById('fName').value = '';
-        document.getElementById('fCal').value = '';
-        await sync();
+        document.getElementById('foodName').value = '';
+        document.getElementById('foodCal').value = '';
+        await save();
+        tg.HapticFeedback.notificationOccurred('success');
     }
 
-    loadData();
+    async function delFood(idx) {
+        const items = Array.from(document.querySelectorAll('.food-data-item'));
+        items.splice(idx, 1);
+        const newFact = items.reduce((acc, el) => acc + JSON.parse(el.dataset.info).cal, 0);
+        document.getElementById('cF_val').innerText = newFact;
+        
+        const log = document.getElementById('foodLog');
+        log.innerHTML = '';
+        items.forEach(el => log.appendChild(el));
+        
+        await save();
+    }
+
+    async function modMoney(isEarn) {
+        const val = parseInt(document.getElementById('moneyInp').value) || 0;
+        const cur = parseInt(document.getElementById('moneyNet').innerText);
+        document.getElementById('moneyNet').innerText = isEarn ? cur + val : cur - val;
+        document.getElementById('moneyInp').value = '';
+        await save();
+        tg.HapticFeedback.impactOccurred('medium');
+    }
+
+    function updateUI() {
+        const cF = parseInt(document.getElementById('cF_val').innerText);
+        const cN = parseInt(document.getElementById('cN').value);
+        let s = 0;
+        if(document.getElementById('read').checked) s++;
+        if(document.getElementById('sport').checked) s++;
+        if(cN && Math.abs((cF-cN)/cN) <= 0.15) s++;
+        
+        const p = s / 3;
+        const status = p > 0.6 ? ["🚀", "Супер"] : p > 0.3 ? ["🥇", "Хорошо"] : ["🥉", "Плохо"];
+        document.getElementById('dayEmo').innerText = status[0];
+        document.getElementById('dayText').innerText = status[1];
+        updateChart();
+    }
+
+    function updateChart() {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [1, 2, 3, 4, 5], // Упростил для примера
+                datasets: [{ label: 'Прогресс', data: [1, 2, s_val || 0, 1, 3], borderColor: '#74aa50', tension: 0.4 }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    }
+
+    setUser('Артем');
 </script>
 </body>
 </html>
